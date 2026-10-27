@@ -1,0 +1,34 @@
+project_id = "multi-tenant-saas-starter"
+
+[api]
+enabled = true
+port = 55321
+schemas = ["public", "storage", "graphql_public"]
+
+[db]
+port = 55322
+
+[studio]
+port = 55323
+
+[local_smtp]
+port = 55324
+
+[analytics]
+port = 55327
+
+[auth]
+site_url = "http://127.0.0.1:3000"
+additional_redirect_urls = ["http://127.0.0.1:3000/**", "http://localhost:3000/**", "http://127.0.0.1:3100/**"]
+minimum_password_length = 8
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+max_frequency = "1s"
+
+# Local tests create many disposable users. Production settings are in docs/OPERATIONS.md.
+[auth.rate_limit]
+email_sent = 100
+sign_in_sign_ups = 100
+token_verifications = 100
