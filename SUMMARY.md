@@ -1,16 +1,20 @@
 # Resumen de implementación
 
+**Vigencia:** snapshot de la primera implementación de la base multi-tenant. Describe
+el estado técnico de esa entrega, no la dirección actual del producto. El alcance
+vigente está en `README.md` y `docs/decisions/0002-process-platform.md`.
+
 ## Estado
 
-Se inició la implementación del starter definido en `ARCHITECTURE.md`. El alcance
-de esta primera entrega es una base neutral de autenticación, organizaciones y
-membresías, preparada para que repositorios derivados añadan sus módulos.
+La primera entrega implementó la base de autenticación, organizaciones y membresías
+descrita en `ARCHITECTURE.md` en ese momento. No incluía módulos de procesos; ahora
+el producto evoluciona en este mismo repositorio según el ADR 0002.
 
 ## Decisiones tomadas
 
 - Se usa un monorepo liviano: `apps/web` para Next.js y `apps/api` para FastAPI.
-- No se incluye ningún módulo de negocio. Cada repositorio derivado debe implementar
-  sus recursos tenant-scoped con migración, RLS, API, UI y pruebas.
+- En esta entrega no se incluyó un módulo de negocio; los futuros recursos del
+  producto se añaden aquí con migración, RLS, API, UI y pruebas.
 - FastAPI crea un cliente Supabase nuevo por request con el JWT del usuario. No se
   configuró ni se requiere `service_role` para requests de usuario.
 - La validación de identidad se delega a `supabase.auth.get_user(token)`, que valida
@@ -39,8 +43,7 @@ membresías, preparada para que repositorios derivados añadan sus módulos.
   `.env.example` sin secretos.
 - Flujo de CI para migraciones locales, pruebas unitarias, RLS, lint, build web y
   Playwright en cada pull request.
-- Guía `docs/MODULE_PATTERN.md` para que los repositorios derivados incorporen
-  módulos tenant-scoped de forma segura.
+- Guía `docs/MODULE_PATTERN.md` para incorporar módulos tenant-scoped de forma segura.
 
 ## Configuración requerida
 

@@ -1,9 +1,12 @@
-# Arquitectura SaaS Multi-Tenant
+# Arquitectura de plataforma de procesos multi-tenant
 
 ## Objetivo
 
-Este repositorio sirve como base para aplicaciones SaaS con registro de usuarios,
-autenticación, organizaciones, permisos, base de datos y módulos de negocio.
+El producto objetivo ayuda a descubrir, diseñar, ejecutar y mejorar procesos
+operativos que dependen de comunicaciones y sistemas fragmentados. El código actual
+implementa la base multi-tenant de usuarios, organizaciones y permisos; la evolución
+empieza por discovery y diseño de procesos, con pilotos acotados antes de automatizar
+a escala. Consulta `docs/decisions/0002-process-platform.md`.
 
 La arquitectura prioriza:
 
@@ -12,6 +15,8 @@ La arquitectura prioriza:
 - Un backend Python explícito para la lógica de negocio.
 - Servicios gestionados de Supabase para reducir infraestructura operativa.
 - Posibilidad de crecer sin separar prematuramente todos los servicios.
+- IA para entradas ambiguas, reglas deterministas para decisiones de negocio y personas para excepciones.
+- Los sistemas de registro del cliente siguen siendo autoritativos; el contexto de ejecución debe ser trazable y tenant-scoped.
 
 ## Stack
 
@@ -23,11 +28,12 @@ La arquitectura prioriza:
 | Persistencia | Supabase PostgreSQL | Datos de la aplicación |
 | Autenticación | Supabase Auth | Registro, login, sesiones y recuperación |
 | Autorización | FastAPI + PostgreSQL RLS | Permisos de aplicación y aislamiento de filas |
-| Archivos | Supabase Storage | Avatares, documentos y otros archivos |
+| Archivos | Supabase Storage | Capacidad prevista; aún no implementada |
 | Tiempo real | Supabase Realtime | Actualizaciones en tiempo real cuando sean necesarias |
 | Migraciones | Supabase CLI + SQL | Esquema reproducible y versionado |
-| Tests unitarios e integración | Vitest | Lógica de frontend, utilidades y contratos rápidos |
-| Tests end-to-end | Playwright | Flujos reales desde el navegador |
+| Tests de frontend | Vitest | Unitarios de UI y utilidades con API/Supabase simulados |
+| Tests de API | pytest | Unitarios e integración de FastAPI y aislamiento RLS |
+| Tests end-to-end | Playwright | Flujos críticos reales desde el navegador |
 | Contenedores | Docker + Docker Compose | Entornos reproducibles para API y servicios auxiliares |
 
 ## Vista general
@@ -122,7 +128,7 @@ identificador interno antes de llegar a los casos de uso.
 
 ### 5. Roles iniciales fijos
 
-El starter comienza con tres roles, representados mediante un tipo enumerado en
+El esquema inicial define tres roles, representados mediante un tipo enumerado en
 PostgreSQL y en los contratos de la API:
 
 | Rol | Alcance inicial |
@@ -484,7 +490,7 @@ apps/api/
 1. Instalar Node.js, Python y Supabase CLI.
 2. Ejecutar Supabase localmente con `supabase start`.
 3. Copiar `.env.example` a `.env` y completar las variables.
-4. Aplicar migraciones con `supabase db reset`.
+4. Aplicar migraciones incrementales con `pnpm exec supabase migration up --local`.
 5. Iniciar FastAPI y Next.js por separado.
 6. Ejecutar tests unitarios y end-to-end antes de publicar.
 
@@ -499,7 +505,7 @@ apps/api/
 
 ## Requisitos mínimos de producción
 
-El starter no se considera listo para producción si no incluye estos controles:
+La plataforma no debe operar con datos de clientes en producción sin estos controles:
 
 - **Rate limiting:** limitar login, recuperación de contraseña, invitaciones y
   endpoints públicos para reducir abuso y ataques de fuerza bruta.

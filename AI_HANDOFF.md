@@ -2,6 +2,11 @@
 
 Actualizado: 10 de septiembre de 2026.
 
+> **Archivo histórico de handoff.** Sus tareas y observaciones describen el estado
+> del 10 de septiembre de 2026 y no son el plan vigente. Para la dirección de
+> producto consulta `README.md` y `docs/decisions/0002-process-platform.md`; para
+> los comandos y el estado actual prevalecen `AGENTS.md`, los manifests y la CI.
+
 ## 1. Instrucción del usuario y punto de corte
 
 El usuario pidió implementar las recomendaciones del diagnóstico para completar
@@ -59,9 +64,9 @@ implementar funcionalidades que ya están presentes. No se lanzaron subagentes.
    relacionen recursos tenant-scoped.
 10. Pruebas de integración solo contra Supabase local/efímero.
 
-El ADR neutral excluye deliberadamente módulos de negocio, pagos, invitaciones
-por correo y Storage hasta que un producto los necesite. No añadirlos como forma
-de “completar” este trabajo.
+El alcance original del ADR 0001 (histórico y supersedido en producto por el ADR
+0002) excluía módulos de negocio, pagos, invitaciones por correo y Storage. Esa
+restricción ya no define el objetivo de este repositorio.
 
 ## 3. Cambios implementados
 

@@ -1,8 +1,20 @@
-# Multi-tenant SaaS starter
+# Plataforma de procesos operativos
 
-Base neutral para productos SaaS con Next.js, FastAPI y Supabase. Incluye
-autenticación, organizaciones, membresías, permisos, auditoría y aislamiento RLS;
-no incluye módulos de negocio, Storage ni invitaciones.
+Plataforma para descubrir, diseñar, ejecutar y mejorar procesos operativos que hoy
+dependen de comunicaciones y sistemas fragmentados. La dirección de producto
+empieza por discovery y diseño, y valida el valor con pilotos acotados antes de
+ampliar la automatización. Combina IA para entradas ambiguas, reglas explícitas
+para decisiones de negocio y personas para excepciones; los sistemas de registro
+del cliente siguen siendo autoritativos.
+
+## Estado actual
+
+El código implementa la base multi-tenant: autenticación, organizaciones,
+membresías, permisos, auditoría y aislamiento RLS con Next.js, FastAPI y Supabase.
+El módulo de discovery de procesos, la ejecución durable de workflows, las
+integraciones operativas y Storage aún no están implementados. Consulta
+[`docs/decisions/0002-process-platform.md`](docs/decisions/0002-process-platform.md)
+para la decisión de producto y `ARCHITECTURE.md` para las decisiones técnicas.
 
 ## Requisitos
 
@@ -51,14 +63,16 @@ Las integraciones y E2E rechazan destinos que no sean Supabase local. Los E2E us
 Chromium instalado por Playwright; si no está disponible, `scripts/local.py` usa
 Chrome o Chromium instalado localmente. Las trazas se conservan ante fallos.
 
-## Módulos derivados
+## Evolución del producto
 
-No añadas recursos de ejemplo a esta base. Sigue
-[`docs/MODULE_PATTERN.md`](docs/MODULE_PATTERN.md): cada módulo requiere migración,
-RLS por operación, permisos API, UI a través de FastAPI, auditoría y pruebas con
-dos tenants y JWT reales.
+El siguiente módulo previsto es discovery y diseño de procesos: documentar el flujo
+actual, canales, sistemas, métricas, decisiones y excepciones para seleccionar un
+piloto medible. Los módulos de negocio pertenecen a este producto, no a un repositorio
+derivado. Sigue [`docs/MODULE_PATTERN.md`](docs/MODULE_PATTERN.md) para cada recurso
+tenant-scoped: migración, RLS, permisos API, UI a través de FastAPI, auditoría y
+pruebas con dos tenants y JWT reales.
 
 ## Operación
 
-Consulta [`docs/OPERATIONS.md`](docs/OPERATIONS.md) antes de desplegar. El starter
+Consulta [`docs/OPERATIONS.md`](docs/OPERATIONS.md) antes de desplegar. El repositorio
 no configura proveedores de SMTP, Sentry, alertas ni backups gestionados.

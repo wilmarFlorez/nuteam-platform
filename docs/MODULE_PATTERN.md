@@ -1,7 +1,8 @@
-# Patrón para módulos derivados
+# Patrón para módulos de negocio
 
-Cada módulo de negocio se implementa en el repositorio que clona esta base. No se
-añaden recursos de ejemplo al starter.
+Este checklist aplica a los módulos de producto de este repositorio. El primer módulo
+previsto es discovery y diseño de procesos. Los recursos tenant-scoped deben seguir
+estas reglas aunque el módulo todavía esté en fase de piloto.
 
 ## Checklist obligatorio
 

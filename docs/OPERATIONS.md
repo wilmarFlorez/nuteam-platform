@@ -39,7 +39,7 @@ de compartirlos, confirma que no contienen variables de entorno ni credenciales.
 Activa backups administrados en el proyecto Supabase de cada entorno. Al menos
 periódicamente, restaura en un destino aislado y verifica: acceso RLS cruzado,
 auditoría, membresías y `active_owner_count`. Registra fecha, origen, destino,
-duración y resultado de cada simulacro. Este starter no configura backups ni una
+duración y resultado de cada simulacro. Este repositorio no configura backups ni una
 automatización de restauración.
 
 ## Administración y retención
