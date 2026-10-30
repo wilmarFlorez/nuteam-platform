@@ -1,10 +1,17 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { Alert, Badge, Button, Card, Checkbox, Input, Select, Spinner, type BadgeVariant } from "@/components/ui";
 import { apiRequest } from "@/lib/api";
 import { Access, AuditLog, Member, Role } from "@/lib/types";
 
 type Props = { token: string; organizationId: string; onError: (error: unknown) => void; onMembershipChanged: () => void };
+
+function roleVariant(role: Role): BadgeVariant {
+  if (role === "owner") return "primary";
+  if (role === "admin") return "info";
+  return "neutral";
+}
 
 export function Workspace({ token, organizationId, onError, onMembershipChanged }: Props) {
   const [access, setAccess] = useState<Access | null>(null);
@@ -61,42 +68,127 @@ export function Workspace({ token, organizationId, onError, onMembershipChanged 
     finally { setBusy(false); }
   }
 
-  if (loading) return <section aria-busy="true"><p>Cargando organización...</p></section>;
-  if (failed || !access) return <section><p>No se pudo cargar la organización.</p><button onClick={() => setRevision((value) => value + 1)}>Reintentar</button></section>;
+  if (loading) {
+    return (
+      <Card className="workspace-card" aria-busy="true">
+        <div className="loading-row"><Spinner label="Cargando organización" /> <span>Cargando organización...</span></div>
+      </Card>
+    );
+  }
+  if (failed || !access) {
+    return (
+      <Card className="workspace-card" aria-labelledby="workspace-error-heading">
+        <h2 id="workspace-error-heading">Espacio de trabajo</h2>
+        <Alert variant="danger">No se pudo cargar la organización.</Alert>
+        <Button variant="outline" onClick={() => setRevision((value) => value + 1)}>Reintentar</Button>
+      </Card>
+    );
+  }
   const manage = access.permissions.includes("members:manage");
   const manageOwners = access.permissions.includes("owners:manage");
   const roles: Role[] = manageOwners ? ["member", "admin", "owner"] : ["member", "admin"];
 
-  return <section>
-    <h2>Espacio listo</h2><p>Tu rol: <strong>{access.role}</strong></p>
-    <h3>Miembros</h3>
-    {manage && <form onSubmit={addMember}>
-      <fieldset disabled={busy}><legend>Agregar cuenta registrada</legend>
-        <p>Pide a la persona el ID de usuario que aparece en su sesión.</p>
-        <label>ID de usuario<input name="user_id" required pattern="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}" /></label>
-        <label>Rol del nuevo miembro<select name="role">{roles.map((role) => <option key={role}>{role}</option>)}</select></label>
-        <button>Agregar miembro</button>
-      </fieldset>
-    </form>}
-    <ul className="members">{members.map((member) => <li key={member.user_id}>
-      <p><code>{member.user_id}</code> {member.user_id === access.user_id && "(tú)"} — {member.role} · {member.is_active ? "Activo" : "Inactivo"}</p>
-      {manage && (member.role !== "owner" || manageOwners) && <form key={`${member.user_id}:${member.role}:${member.is_active}`} onSubmit={(event) => {
-        event.preventDefault();
-        const fields = new FormData(event.currentTarget);
-        void mutate(`/members/${member.user_id}`, "PATCH", { role: fields.get("role"), is_active: fields.get("active") === "on" }, member.user_id === access.user_id);
-      }}>
-        <fieldset disabled={busy} className="inline-form">
-          <label>Rol de {member.user_id}<select name="role" defaultValue={member.role}>{roles.map((role) => <option key={role}>{role}</option>)}</select></label>
-          <label><input name="active" type="checkbox" defaultChecked={member.is_active} /> Membresía activa</label>
-          <button>Guardar miembro</button>
-          <button type="button" onClick={() => void mutate(`/members/${member.user_id}`, "DELETE", undefined, member.user_id === access.user_id)}>Retirar miembro</button>
-        </fieldset>
-      </form>}
-    </li>)}</ul>
-    <button disabled={busy} onClick={() => void mutate("/members/me", "DELETE", undefined, true)}>Abandonar organización</button>
-    {access.permissions.includes("audit:read") && <section><h3>Auditoría</h3>
-      <ul>{audit.map((event) => <li key={event.id}><time dateTime={event.created_at}>{new Date(event.created_at).toLocaleString()}</time> — {event.action} — <code>{event.resource_id}</code></li>)}</ul>
-      {moreAudit && <button disabled={busy} onClick={loadMoreAudit}>Cargar eventos anteriores</button>}
-    </section>}
-  </section>;
+  return (
+    <Card className="workspace-card" aria-labelledby="workspace-heading">
+      <h2 id="workspace-heading">Espacio listo</h2>
+      <p className="workspace-role">Tu rol: <Badge variant={roleVariant(access.role)}>{access.role}</Badge></p>
+
+      <div className="section-heading">
+        <h3>Miembros</h3>
+        {manage && <Badge variant="primary">Gestión habilitada</Badge>}
+      </div>
+      {manage && (
+        <form className="member-create-form" onSubmit={addMember}>
+          <fieldset className="form-fields inline-form" disabled={busy}>
+            <legend>Agregar cuenta registrada</legend>
+            <p className="member-help">Pide a la persona el ID de usuario que aparece en su sesión.</p>
+            <label className="ui-field" htmlFor="new-member-id">
+              ID de usuario
+              <Input id="new-member-id" name="user_id" required pattern="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}" />
+            </label>
+            <label className="ui-field" htmlFor="new-member-role">
+              Rol del nuevo miembro
+              <Select id="new-member-role" name="role">{roles.map((role) => <option key={role}>{role}</option>)}</Select>
+            </label>
+            <Button type="submit">Agregar miembro</Button>
+          </fieldset>
+        </form>
+      )}
+
+      {members.length > 0 ? (
+        <ul className="member-list">
+          {members.map((member) => (
+            <li className="member-item" key={member.user_id}>
+              <div className="member-item__summary">
+                <code className="member-item__id">{member.user_id}</code>
+                {member.user_id === access.user_id && <span className="text-muted">(tú)</span>}
+                <Badge variant={roleVariant(member.role)}>{member.role}</Badge>
+                <Badge variant={member.is_active ? "success" : "neutral"}>{member.is_active ? "Activo" : "Inactivo"}</Badge>
+              </div>
+              {manage && (member.role !== "owner" || manageOwners) && (
+                <form
+                  className="member-edit-form"
+                  key={`${member.user_id}:${member.role}:${member.is_active}`}
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const fields = new FormData(event.currentTarget);
+                    void mutate(`/members/${member.user_id}`, "PATCH", { role: fields.get("role"), is_active: fields.get("active") === "on" }, member.user_id === access.user_id);
+                  }}
+                >
+                  <fieldset className="form-fields inline-form" disabled={busy}>
+                    <label className="ui-field" htmlFor={`member-role-${member.user_id}`}>
+                      Rol de {member.user_id}
+                      <Select id={`member-role-${member.user_id}`} name="role" defaultValue={member.role}>
+                        {roles.map((role) => <option key={role}>{role}</option>)}
+                      </Select>
+                    </label>
+                    <label className="ui-checkbox-field">
+                      <Checkbox name="active" defaultChecked={member.is_active} />
+                      <span>Membresía activa</span>
+                    </label>
+                    <Button type="submit" variant="secondary">Guardar miembro</Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() => void mutate(`/members/${member.user_id}`, "DELETE", undefined, member.user_id === access.user_id)}
+                    >
+                      Retirar miembro
+                    </Button>
+                  </fieldset>
+                </form>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="empty-state">Todavía no hay miembros en esta organización.</p>
+      )}
+
+      <div className="member-item__actions">
+        <Button variant="destructive" size="sm" disabled={busy} onClick={() => void mutate("/members/me", "DELETE", undefined, true)}>
+          Abandonar organización
+        </Button>
+      </div>
+
+      {access.permissions.includes("audit:read") && (
+        <Card className="audit-card" aria-labelledby="audit-heading">
+          <h3 id="audit-heading">Auditoría</h3>
+          {audit.length > 0 ? (
+            <ul className="audit-list">
+              {audit.map((event) => (
+                <li className="audit-item" key={event.id}>
+                  <time dateTime={event.created_at}>{new Date(event.created_at).toLocaleString()}</time>
+                  <span>{event.action}</span>
+                  <code>{event.resource_id}</code>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="empty-state">No hay eventos de auditoría todavía.</p>
+          )}
+          {moreAudit && <Button variant="outline" size="sm" disabled={busy} onClick={loadMoreAudit}>Cargar eventos anteriores</Button>}
+        </Card>
+      )}
+    </Card>
+  );
 }

@@ -6,6 +6,7 @@ __pycache__/
 node_modules/
 .next/
 .next-*/
+*.tsbuildinfo
 .coverage*
 coverage.xml
 supabase/.temp/
@@ -15,4 +16,6 @@ supabase/.branches/
 coverage/
 playwright-report/
 test-results/
+storybook-static/
+.playwright-mcp/
 .DS_Store

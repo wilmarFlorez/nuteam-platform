@@ -1,9 +1,10 @@
 "use client";
 
-import { Session } from "@supabase/supabase-js";
+import type { Session } from "@supabase/supabase-js";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { AuthPanel } from "@/components/auth-panel";
 import { Workspace } from "@/components/workspace";
+import { Alert, Button, Card, Input, Select, Spinner, type AlertVariant } from "@/components/ui";
 import { ApiError, apiRequest } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { Organization } from "@/lib/types";
@@ -13,11 +14,17 @@ export default function Home() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [organizationId, setOrganizationId] = useState("");
   const [message, setMessage] = useState("");
+  const [messageVariant, setMessageVariant] = useState<AlertVariant>("info");
   const [loading, setLoading] = useState(true);
   const [loadingOrganizations, setLoadingOrganizations] = useState(false);
   const [busy, setBusy] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [revision, setRevision] = useState(0);
+
+  const showMessage = useCallback((nextMessage: string, variant: AlertVariant = "info") => {
+    setMessage(nextMessage);
+    setMessageVariant(variant);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -25,7 +32,7 @@ export default function Home() {
     const recovery = new URLSearchParams(window.location.search).has("recovery");
     const hash = new URLSearchParams(window.location.hash.slice(1));
     if (hash.has("error")) {
-      setMessage("El enlace de recuperación no es válido o ha expirado. Solicita uno nuevo.");
+      showMessage("El enlace de recuperación no es válido o ha expirado. Solicita uno nuevo.", "danger");
       window.history.replaceState(null, "", "/");
     }
     const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
@@ -40,19 +47,19 @@ export default function Home() {
       if (!active) return;
       if (error) throw error;
       if (!receivedEvent) { setSession(data.session); if (recovery && data.session) setResetting(true); }
-      if (recovery && !data.session) setMessage("El enlace ha expirado. Solicita un nuevo correo de recuperación.");
-    }).catch(() => { if (active) setMessage("No se pudo recuperar la sesión. Vuelve a ingresar."); })
+      if (recovery && !data.session) showMessage("El enlace ha expirado. Solicita un nuevo correo de recuperación.", "danger");
+    }).catch(() => { if (active) showMessage("No se pudo recuperar la sesión. Vuelve a ingresar.", "danger"); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; data.subscription.unsubscribe(); };
-  }, []);
+  }, [showMessage]);
 
   const handleError = useCallback((error: unknown) => {
     if (error instanceof ApiError && error.status === 401) {
       setSession(null); setOrganizations([]); setOrganizationId("");
-      setMessage("Tu sesión expiró. Vuelve a ingresar.");
+      showMessage("Tu sesión expiró. Vuelve a ingresar.", "danger");
       void supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
-    } else setMessage(error instanceof Error ? error.message : "No se pudo completar la solicitud.");
-  }, []);
+    } else showMessage(error instanceof Error ? error.message : "No se pudo completar la solicitud.", "danger");
+  }, [showMessage]);
 
   const token = session?.access_token;
   useEffect(() => {
@@ -75,7 +82,7 @@ export default function Home() {
       if (error) throw error;
       setSession(null); setResetting(false); setOrganizations([]); setOrganizationId("");
       window.history.replaceState(null, "", "/");
-      setMessage(passwordUpdated ? "Contraseña actualizada. Ingresa con tu nueva contraseña." : "");
+      showMessage(passwordUpdated ? "Contraseña actualizada. Ingresa con tu nueva contraseña." : "", passwordUpdated ? "success" : "info");
     } catch (error) { handleError(error); }
     finally { setBusy(false); }
   }
@@ -90,27 +97,76 @@ export default function Home() {
       const organization = await apiRequest<Organization>("/organizations", token, undefined, { method: "POST", body: JSON.stringify({ name: fields.get("name"), slug: fields.get("slug") }) });
       setOrganizations((items) => [...items, organization]); setOrganizationId(organization.id);
       form.reset();
+      showMessage("Organización creada.", "success");
     } catch (error) { handleError(error); }
     finally { setBusy(false); }
   }
 
-  if (loading) return <main aria-busy="true"><p>Cargando sesión...</p></main>;
-  if (!session || resetting) return <AuthPanel resetting={resetting && !!session} message={message} onMessage={setMessage} onPasswordUpdated={() => void signOut(true)} />;
+  if (loading) {
+    return (
+      <main className="app-shell" aria-busy="true">
+        <div className="loading-row"><Spinner label="Cargando sesión" /> <span>Cargando sesión...</span></div>
+      </main>
+    );
+  }
+  if (!session || resetting) {
+    return (
+      <AuthPanel
+        resetting={resetting && !!session}
+        message={message}
+        messageVariant={messageVariant}
+        onMessage={showMessage}
+        onPasswordUpdated={() => void signOut(true)}
+      />
+    );
+  }
 
-  return <main>
-    <header><div><h1>Workspace</h1><p>Base multi-tenant para tu producto.</p><p>Tu ID de usuario: <code data-testid="user-id">{session.user.id}</code></p></div><button disabled={busy} onClick={() => void signOut()}>Cerrar sesión</button></header>
-    {message && <p role="alert">{message}</p>}
-    <section><h2>Organización activa</h2>
-      {loadingOrganizations ? <p role="status">Cargando organizaciones...</p> : <select aria-label="Organización activa" value={organizationId} onChange={(event) => { setOrganizationId(event.target.value); setMessage(""); }}>
-        <option value="">Selecciona una organización</option>{organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}
-      </select>}
-      <button disabled={loadingOrganizations} onClick={() => setRevision((value) => value + 1)}>Actualizar organizaciones</button>
-      <form onSubmit={createOrganization}><fieldset disabled={busy} className="inline-form">
-        <input name="name" aria-label="Nueva organización" placeholder="Nueva organización" required maxLength={120} />
-        <input name="slug" aria-label="Slug" placeholder="slug-unico" required maxLength={120} pattern="[a-z0-9]+(-[a-z0-9]+)*" />
-        <button>Crear organización</button>
-      </fieldset></form>
-    </section>
+  return <main className="app-shell">
+    <header className="page-header">
+      <div className="page-header__copy">
+        <p className="eyebrow">Espacio de trabajo</p>
+        <h1>Workspace</h1>
+        <p className="page-header__description">Base multi-tenant para tu producto.</p>
+        <p className="page-header__identity">Tu ID de usuario: <code data-testid="user-id">{session.user.id}</code></p>
+      </div>
+      <Button variant="outline" disabled={busy} onClick={() => void signOut()}>Cerrar sesión</Button>
+    </header>
+    {message && <Alert className="page-message" variant={messageVariant} role="alert">{message}</Alert>}
+    <Card className="workspace-card" aria-labelledby="organization-heading">
+      <h2 id="organization-heading">Organización activa</h2>
+      {loadingOrganizations ? (
+        <div className="loading-row"><Spinner label="Cargando organizaciones" /> <span>Cargando organizaciones...</span></div>
+      ) : (
+        <div className="organization-controls">
+          <label className="ui-field" htmlFor="active-organization">
+            Organización
+            <Select
+              id="active-organization"
+              aria-label="Organización activa"
+              value={organizationId}
+              onChange={(event) => { setOrganizationId(event.target.value); showMessage(""); }}
+            >
+              <option value="">Selecciona una organización</option>
+              {organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}
+            </Select>
+          </label>
+          <Button variant="secondary" onClick={() => setRevision((value) => value + 1)}>Actualizar organizaciones</Button>
+        </div>
+      )}
+      <form className="organization-form" onSubmit={createOrganization}>
+        <fieldset className="form-fields inline-form inline-form--create" disabled={busy}>
+          <label className="ui-field" htmlFor="new-organization-name">
+            Nombre
+            <Input id="new-organization-name" name="name" aria-label="Nueva organización" placeholder="Nombre de la organización" required maxLength={120} />
+          </label>
+          <label className="ui-field" htmlFor="new-organization-slug">
+            Slug
+            <Input id="new-organization-slug" name="slug" aria-label="Slug" placeholder="slug-unico" required maxLength={120} pattern="[a-z0-9]+(-[a-z0-9]+)*" />
+          </label>
+          <Button type="submit">Crear organización</Button>
+        </fieldset>
+      </form>
+    </Card>
     {organizationId && !loadingOrganizations && <Workspace key={`${session.user.id}:${organizationId}`} token={session.access_token} organizationId={organizationId} onError={handleError} onMembershipChanged={() => setRevision((value) => value + 1)} />}
   </main>;
 }
